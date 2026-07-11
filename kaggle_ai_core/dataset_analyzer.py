@@ -248,6 +248,40 @@ class DatasetAnalyzer:
         Returns:
             The winning DatasetProfile, or None if every candidate failed.
         """
+        profiles = self.analyze_shortlist_all(shortlist)
+        if not profiles:
+            logger.error("No candidate in the shortlist could be successfully profiled.")
+            return None
+
+        winner = profiles[0]
+        logger.info(
+            "Final selection: '%s' (%s) | metadata_score=%.2f quality_score=%.2f combined_score=%.2f",
+            winner.title, winner.ref, winner.metadata_score, winner.quality_score, winner.combined_score,
+        )
+        return winner
+
+    def analyze_shortlist_all(self, shortlist: list[ScoredDataset]) -> list[DatasetProfile]:
+        """
+        Download and profile every candidate in the shortlist, returning
+        ALL successfully profiled candidates (not just the winner),
+        sorted best-first by combined score. Useful for callers that need
+        a fallback chain -- e.g. trying the next-best candidate if the
+        top one turns out unsuitable for a purpose analyze_shortlist's
+        scoring doesn't account for (such as having a usable ML target
+        column).
+
+        Candidates that fail to download, contain no readable CSVs, or
+        error out during profiling are logged and skipped.
+
+        Args:
+            shortlist: Top-N candidates from Stage A metadata scoring,
+                ordered best-first.
+
+        Returns:
+            All successfully profiled DatasetProfile objects, sorted
+            best-first by combined_score. Empty list if every candidate
+            failed.
+        """
         profiles: list[DatasetProfile] = []
 
         for candidate in shortlist:
@@ -264,17 +298,8 @@ class DatasetAnalyzer:
 
             profiles.append(profile)
 
-        if not profiles:
-            logger.error("No candidate in the shortlist could be successfully profiled.")
-            return None
-
         profiles.sort(key=lambda p: p.combined_score, reverse=True)
-        winner = profiles[0]
-        logger.info(
-            "Final selection: '%s' (%s) | metadata_score=%.2f quality_score=%.2f combined_score=%.2f",
-            winner.title, winner.ref, winner.metadata_score, winner.quality_score, winner.combined_score,
-        )
-        return winner
+        return profiles
 
     def _analyze_one(self, candidate: ScoredDataset) -> DatasetProfile | None:
         """Download and profile a single candidate dataset."""
