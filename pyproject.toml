@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kaggle-ai-core"
+version = "0.1.0"
+description = "Shared core modules for Kaggle AI automation pipelines: dataset selection/profiling, Nemotron client, Kaggle API wrapper, checkpointing, structured run logging."
+requires-python = ">=3.12"
+dependencies = [
+    "kaggle==1.6.17",
+    "openai==1.54.4",
+    "pandas==2.2.3",
+    "python-dotenv==1.0.1",
+    "pydantic==2.9.2",
+    "pydantic-settings==2.6.1",
+    "tenacity==9.0.0",
+    "requests==2.32.3",
+    "httpx==0.27.2",
+]
+
+[tool.setuptools.packages.find]
+include = ["kaggle_ai_core*"]
