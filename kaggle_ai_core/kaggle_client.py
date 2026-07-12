@@ -202,6 +202,28 @@ class KaggleClient:
         logger.info("Pushing kernel from %s", folder)
         self._push_with_retry(folder)
         logger.info("Kernel push complete for %s", folder)
+        
+    def create_model(self, folder: Path) -> None:
+        """Create a new top-level Kaggle Model entity from model-metadata.json in folder."""
+        logger.info("Creating Kaggle Model from %s", folder)
+        self._create_model_with_retry(folder)
+        logger.info("Model creation complete for %s", folder)
+
+    @with_retry(max_attempts=3)
+    def _create_model_with_retry(self, folder: Path) -> None:
+        with _force_utf8_default_encoding():
+            self._api.model_create_new(str(folder))
+
+    def create_model_instance(self, folder: Path) -> None:
+        """Create a Model Instance (and upload its files) from model-instance-metadata.json in folder."""
+        logger.info("Creating Kaggle Model Instance from %s", folder)
+        self._create_model_instance_with_retry(folder)
+        logger.info("Model Instance creation complete for %s", folder)
+
+    @with_retry(max_attempts=3)
+    def _create_model_instance_with_retry(self, folder: Path) -> None:
+        with _force_utf8_default_encoding():
+            self._api.model_instance_create(str(folder))
 
     @with_retry(max_attempts=3)
     def _push_with_retry(self, folder: Path) -> None:
