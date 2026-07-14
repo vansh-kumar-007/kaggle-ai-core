@@ -214,11 +214,31 @@ class KaggleClient:
         with _force_utf8_default_encoding():
             self._api.model_create_new(str(folder))
 
-    def create_model_instance(self, folder: Path) -> None:
-        """Create a Model Instance (and upload its files) from model-instance-metadata.json in folder."""
+    def create_model_instance(self, folder: Path) -> str:
+        """
+        Create a Model Instance (and upload its files) from
+        model-instance-metadata.json in folder.
+
+        Returns:
+            The instance URL as reported by Kaggle's own API response
+            (e.g. ".../models/owner/slug/ScikitLearn/default"). Note this
+            may use different capitalization for the framework segment
+            than what was submitted as input (e.g. submitting "scikitLearn"
+            can come back as "ScikitLearn" in the URL) -- callers needing
+            to reference this instance elsewhere (e.g. linking a notebook
+            to it via kernel-metadata.json's model_sources) should parse
+            the framework segment FROM THIS RETURNED URL, not reconstruct
+            it from the submitted value, to avoid a silent case mismatch.
+        """
         logger.info("Creating Kaggle Model Instance from %s", folder)
-        self._create_model_instance_with_retry(folder)
+        result = self._create_model_instance_with_retry(folder)
         logger.info("Model Instance creation complete for %s", folder)
+        return str(result)
+
+    @with_retry(max_attempts=3)
+    def _create_model_instance_with_retry(self, folder: Path):
+        with _force_utf8_default_encoding():
+            return self._api.model_instance_create(str(folder))
 
     def push_kernel(self, folder: Path) -> None:
         """
