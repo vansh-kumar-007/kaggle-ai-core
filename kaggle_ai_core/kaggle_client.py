@@ -220,6 +220,20 @@ class KaggleClient:
         self._create_model_instance_with_retry(folder)
         logger.info("Model Instance creation complete for %s", folder)
 
+    def push_kernel(self, folder: Path) -> None:
+        """
+        Push (upload and publish/update) a kernel from a local folder
+        containing kernel-metadata.json and the notebook file.
+        """
+        logger.info("Pushing kernel from %s", folder)
+        self._push_kernel_with_retry(folder)
+        logger.info("Kernel push complete for %s", folder)
+
+    @with_retry(max_attempts=3)
+    def _push_kernel_with_retry(self, folder: Path) -> None:
+        with _force_utf8_default_encoding():
+            self._api.kernels_push(str(folder))
+    
     @with_retry(max_attempts=3)
     def _create_model_instance_with_retry(self, folder: Path) -> None:
         with _force_utf8_default_encoding():
