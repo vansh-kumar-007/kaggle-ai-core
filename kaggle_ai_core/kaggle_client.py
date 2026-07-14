@@ -16,7 +16,7 @@ import builtins
 from contextlib import contextmanager
 from kaggle.api.kaggle_api_extended import KaggleApi
 from pathlib import Path
-
+import time
 from kaggle_ai_core.utils.retry import with_retry
 
 @contextmanager
@@ -234,6 +234,39 @@ class KaggleClient:
         result = self._create_model_instance_with_retry(folder)
         logger.info("Model Instance creation complete for %s", folder)
         return str(result)
+    
+    def wait_for_model_instance_ready(
+        self, owner_slug: str, model_slug: str, framework: str, instance_slug: str,
+        timeout_seconds: int = 90, poll_interval_seconds: int = 5,
+    ) -> bool:
+        """
+        Poll until a freshly created Model Instance is actually resolvable
+        via the API, before relying on it elsewhere (e.g. linking a
+        notebook to it via kernel-metadata.json's model_sources).
+
+        Kaggle's backend appears to process/index a new Model Instance
+        asynchronously -- pushing a linked notebook immediately after
+        upload can silently fail to attach anything, since client-side
+        validation of a model_sources string only checks it's a non-empty
+        slash-separated string, not that it actually resolves yet.
+
+        Returns:
+            True if the instance became resolvable within the timeout,
+            False otherwise (caller should treat this as "don't risk
+            linking to it yet" rather than raising).
+        """
+        instance_ref = f"{owner_slug}/{model_slug}/{framework}/{instance_slug}"
+        elapsed = 0
+        while elapsed <= timeout_seconds:
+            try:
+                self._api.model_instance_get(instance_ref)
+                logger.info("Model instance '%s' confirmed ready after %ds.", instance_ref, elapsed)
+                return True
+            except Exception:
+                time.sleep(poll_interval_seconds)
+                elapsed += poll_interval_seconds
+        logger.warning("Model instance '%s' did not become ready within %ds.", instance_ref, timeout_seconds)
+        return False
 
     @with_retry(max_attempts=3)
     def _create_model_instance_with_retry(self, folder: Path):
